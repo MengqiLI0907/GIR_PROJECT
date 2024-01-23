@@ -1,0 +1,40 @@
+import pandas as pd
+import json  # Import json library
+import tensorflow as tf  # Import TensorFlow for error handling
+from neurotpr import geoparse
+
+# Load the geoparsing model
+geoparse.load_model("F:/UZH/Retrieving Geographic Information/Model/PretrainedModel/PretrainedModel/")
+
+# Load the dataset
+file_path = 'F:\\UZH\\Retrieving Geographic Information\\Model\\multi-languages\\disaster_response_messages_test.csv'
+df = pd.read_csv(file_path)
+
+# List to store geoparsing results
+results = []
+
+# Loop through each message and apply geoparsing
+for index, row in df.iterrows():
+    message = row['message']
+    try:
+        geo_result = geoparse.topo_recog(message)
+
+        # Convert the string output to a list of dictionaries
+        try:
+            geo_result_list = json.loads(geo_result)
+            # Extract location names and concatenate them into a single string
+            locations = ', '.join([location['location_name'] for location in geo_result_list])
+        except json.JSONDecodeError:
+            locations = 'Error parsing locations'
+    except tf.errors.InvalidArgumentError:
+        # Handle the specific TensorFlow error
+        message = "the wrong message"
+        locations = 'Invalid Argument Error'
+    print(message)
+    results.append({'id': row['id'], 'message': message, 'geo_locations': locations})
+
+# Create a DataFrame from the results
+results_df = pd.DataFrame(results)
+
+# Save the results to a new CSV file
+results_df.to_csv('geoparsed_Hurricane_Harvey.csv', index=False)

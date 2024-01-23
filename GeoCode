@@ -1,0 +1,48 @@
+import pandas as pd
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
+import time
+
+# Initialize the geolocator
+geolocator = Nominatim(user_agent="geoapiExercises")
+
+def geocode(address):
+    try:
+        location = geolocator.geocode(address)
+        if location:
+            return {
+                'latitude': location.latitude,
+                ' longitude': location.longitude,
+                'full_address': location.address,
+                # Add other properties you're interested in here
+            }
+        return {'latitude': None, 'longitude': None, 'full_address': None}
+    except GeocoderTimedOut:
+        return {'latitude': None, 'longitude': None, 'full_address': None}
+
+# Load the CSV file
+file_path = 'geoparsed_messages.csv'  # Ensure this is the correct path to your CSV file
+df = pd.read_csv(file_path)
+
+# Extract addresses and geocode them
+geocoded_data = []
+for address in df['geo_locations']:
+    # Handle cases where address might be NaN or None
+    if pd.notna(address) and address != 'Error parsing locations' and address != 'Invalid Argument Error':
+        # If multiple addresses, split and take the first one
+        address = address.split(',')[0].strip()
+        geo_data = geocode(address)
+        geo_data['original_address'] = address
+        geocoded_data.append(geo_data)
+        time.sleep(1)  # Sleep for 1 second between requests to avoid hitting rate limits
+    else:
+        geocoded_data.append({'latitude': None, 'longitude': None, 'full_address': None, 'original_address': address})
+
+# Convert the list of dictionaries to a DataFrame
+geo_df = pd.DataFrame(geocoded_data)
+
+# Combine the original DataFrame with the geocoded DataFrame
+combined_df = pd.concat([df, geo_df], axis=1)
+
+# Save the results back to the same CSV file
+combined_df.to_csv(file_path, index=False)

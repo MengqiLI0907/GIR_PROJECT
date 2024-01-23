@@ -1,0 +1,32 @@
+import pandas as pd
+import spacy
+
+# Load spaCy English model
+nlp = spacy.load("en_core_web_sm")
+
+def extract_locations(text):
+    # Process the text
+    doc = nlp(text)
+    # Extract location entities
+    locations = [ent.text for ent in doc.ents if ent.label_ == "GPE" or ent.label_ == 'LOC']
+    return locations
+
+def process_csv(file_path, output_file_path):
+    # Read CSV file
+    df = pd.read_csv(file_path)
+
+    # Check if 'message' column exists
+    if 'message' not in df.columns:
+        return "The CSV file does not contain a 'message' column."
+
+    # Process each message and store the results
+    df['NER_locationnames'] = df['message'].apply(extract_locations)
+
+    # Save the results to a new CSV file
+    df.to_csv(output_file_path, index=False)
+    return f"Results saved to {output_file_path}"
+
+# Example usage
+input_file_path = 'geoparsed_messages.csv'
+output_file_path = 'geoparsed_addresses.csv'
+result = process_csv(input_file_path, output_file_path)
